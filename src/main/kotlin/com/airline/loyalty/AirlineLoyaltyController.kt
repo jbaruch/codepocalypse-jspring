@@ -18,57 +18,60 @@ class AirlineLoyaltyController {
     @Inject
     lateinit var loyaltyService: AirlineLoyaltyService
 
+    @Inject
+    lateinit var ragService: DocumentRAGService
+
     private val logger = Logger.getLogger(AirlineLoyaltyController::class.java)
 
     @GET
     fun index(): String {
-        logger.info("Serving main page")
         return template.data("query", "")
             .data("answer", "")
             .data("error", "")
             .data("conversationStatus", loyaltyService.getConversationStatus())
+            .data("ragStatus", ragService.getStatus())
             .render()
     }
 
     @POST
+    @Path("/")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     fun processQuery(@FormParam("query") query: String?): String {
-        logger.info("Processing query: $query")
-        
         return try {
             when {
                 query.isNullOrBlank() -> {
-                    logger.warn("Empty query received")
                     template.data("query", "")
                         .data("answer", "")
                         .data("error", "Please enter a question about airline loyalty programs.")
                         .data("conversationStatus", loyaltyService.getConversationStatus())
+                        .data("ragStatus", ragService.getStatus())
                         .render()
                 }
                 query.length > 500 -> {
-                    logger.warn("Query too long: ${query.length} characters")
                     template.data("query", query)
                         .data("answer", "")
                         .data("error", "Question is too long. Please keep it under 500 characters.")
                         .data("conversationStatus", loyaltyService.getConversationStatus())
+                        .data("ragStatus", ragService.getStatus())
                         .render()
                 }
                 else -> {
                     val answer = loyaltyService.processQuery(query)
-                    logger.info("Successfully processed query")
                     template.data("query", query)
                         .data("answer", answer)
                         .data("error", "")
                         .data("conversationStatus", loyaltyService.getConversationStatus())
+                        .data("ragStatus", ragService.getStatus())
                         .render()
                 }
             }
         } catch (e: Exception) {
-            logger.error("Error processing query", e)
+            logger.error("Error processing query: ${e.message}")
             template.data("query", query ?: "")
                 .data("answer", "")
-                .data("error", "Sorry, I encountered an error processing your question. Please try again.")
+                .data("error", "An error occurred while processing your request.")
                 .data("conversationStatus", loyaltyService.getConversationStatus())
+                .data("ragStatus", ragService.getStatus())
                 .render()
         }
     }

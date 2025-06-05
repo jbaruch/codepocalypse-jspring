@@ -193,6 +193,23 @@
             content: "💡 ";
             margin-right: 8px;
         }
+        
+        .rag-status {
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+        
+        .rag-ready {
+            color: #34c759;
+        }
+        
+        .rag-loading {
+            color: #f7dc6f;
+        }
+        
+        .rag-disabled {
+            color: #e74c3c;
+        }
     </style>
 </head>
 <body>
@@ -203,6 +220,11 @@
             {#if conversationStatus}
                 <div class="conversation-status">
                     💬 {conversationStatus}
+                    {#if ragStatus}
+                        <span class="rag-status">
+                            • RAG: {ragStatus}
+                        </span>
+                    {/if}
                 </div>
             {/if}
         </div>
