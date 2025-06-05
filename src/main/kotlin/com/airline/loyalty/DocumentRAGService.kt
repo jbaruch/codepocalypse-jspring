@@ -7,7 +7,7 @@ import dev.langchain4j.data.document.splitter.DocumentSplitters
 import dev.langchain4j.data.embedding.Embedding
 import dev.langchain4j.data.segment.TextSegment
 import dev.langchain4j.model.embedding.EmbeddingModel
-import dev.langchain4j.model.openai.OpenAiEmbeddingModel
+import dev.langchain4j.model.mistralai.MistralAiEmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingMatch
 import dev.langchain4j.store.embedding.EmbeddingSearchRequest
 import dev.langchain4j.store.embedding.EmbeddingSearchResult
@@ -19,6 +19,7 @@ import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.jboss.logging.Logger
+import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -32,13 +33,12 @@ class DocumentRAGService {
     private val isReady = AtomicBoolean(false)
     private val isLoading = AtomicBoolean(false)
     
-    private val embeddingModel: EmbeddingModel by lazy {
-        OpenAiEmbeddingModel.builder()
-            .apiKey("not needed")
-            .baseUrl("http://localhost:12434/engines/llama.cpp/v1")
-            .modelName("ai/mistral")
-            .build()
-    }
+    private val embeddingModel = MistralAiEmbeddingModel.builder()
+        .baseUrl("http://localhost:12434/engines/llama.cpp/v1")
+        .apiKey("not-needed") // Required by the API but not used with local models
+        .modelName("mistral")
+        .timeout(Duration.ofSeconds(60))
+        .build()
 
     @PostConstruct
     fun initialize() {

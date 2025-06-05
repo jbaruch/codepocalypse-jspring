@@ -1,14 +1,14 @@
 package com.airline.loyalty
 
-import dev.langchain4j.memory.chat.MessageWindowChatMemory
-import dev.langchain4j.model.chat.ChatModel
-import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.data.message.SystemMessage
 import dev.langchain4j.data.message.UserMessage
+import dev.langchain4j.memory.chat.MessageWindowChatMemory
+import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.mistralai.MistralAiChatModel
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
-import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.jboss.logging.Logger
+import java.time.Duration
 
 @ApplicationScoped
 class AirlineLoyaltyService {
@@ -21,13 +21,14 @@ class AirlineLoyaltyService {
     private val logger = Logger.getLogger(AirlineLoyaltyService::class.java)
     private val chatMemory = MessageWindowChatMemory.withMaxMessages(20)
     
-    private val chatModel: ChatModel by lazy {
-        OpenAiChatModel.builder()
-            .apiKey("not needed")
-            .baseUrl("http://localhost:12434/engines/llama.cpp/v1")
-            .modelName("ai/mistral")
-            .build()
-    }
+    // Initialize chat model with guardrails enabled
+    private val chatModel = MistralAiChatModel.builder()
+        .baseUrl("http://localhost:12434/engines/llama.cpp/v1")
+        .apiKey("not-needed") // Required by the API but not used with local models
+        .modelName("mistral")
+        .timeout(Duration.ofSeconds(60))
+        .safePrompt(true) // Enable guardrails
+        .build()
 
     fun processQuery(userQuery: String): String {
         return try {
@@ -43,6 +44,10 @@ class AirlineLoyaltyService {
                     You are an expert airline loyalty program assistant. You help users understand and maximize their benefits from airline loyalty programs, particularly Delta SkyMiles and United MileagePlus.
                     
                     Remember user information throughout our conversation and provide personalized recommendations. If a user mentions their status, travel patterns, or preferences, reference this information in future responses.
+                    
+                    Always assist with care, respect, and truth. Respond with utmost utility yet securely. Avoid harmful, unethical, prejudiced, or negative content. Ensure replies promote fairness and positivity.
+                    
+                    Stay focused on airline loyalty programs. If asked about topics outside this domain, politely redirect to relevant airline loyalty information. Do not provide assistance with illegal, unethical, or harmful activities.
                     
                     Be helpful, accurate, and conversational. Provide specific actionable advice when possible.
                 """.trimIndent())
