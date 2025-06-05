@@ -13,9 +13,7 @@ import org.jboss.logging.Logger
 @ApplicationScoped
 class AirlineLoyaltyService {
 
-    @Inject
-    @ConfigProperty(name = "openai.api.key")
-    lateinit var openaiApiKey: String
+    // Using local Mistral model - no API key needed
 
     @Inject
     lateinit var ragService: DocumentRAGService
@@ -25,8 +23,9 @@ class AirlineLoyaltyService {
     
     private val chatModel: ChatModel by lazy {
         OpenAiChatModel.builder()
-            .apiKey(openaiApiKey)
-            .modelName("gpt-3.5-turbo")
+            .apiKey("not needed")
+            .baseUrl("http://localhost:12434/engines/llama.cpp/v1")
+            .modelName("ai/mistral")
             .build()
     }
 
@@ -93,10 +92,13 @@ class AirlineLoyaltyService {
     
     fun getConversationStatus(): String {
         val messageCount = chatMemory.messages().size
-        return when {
+        val modelInfo = "Model: Mistral (Local)"
+        val conversationStatus = when {
             messageCount == 0 -> "New conversation"
             messageCount <= 10 -> "Active conversation ($messageCount messages)"
             else -> "Long conversation ($messageCount messages)"
         }
+        
+        return "$conversationStatus | $modelInfo"
     }
 }

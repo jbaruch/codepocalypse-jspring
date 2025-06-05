@@ -25,9 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 @ApplicationScoped
 class DocumentRAGService {
 
-    @Inject
-    @ConfigProperty(name = "openai.api.key")
-    lateinit var openaiApiKey: String
+    // Using local Mistral model - no API key needed
 
     private val logger = Logger.getLogger(DocumentRAGService::class.java)
     private val embeddingStore: EmbeddingStore<TextSegment> = InMemoryEmbeddingStore()
@@ -36,18 +34,15 @@ class DocumentRAGService {
     
     private val embeddingModel: EmbeddingModel by lazy {
         OpenAiEmbeddingModel.builder()
-            .apiKey(openaiApiKey)
-            .modelName("text-embedding-ada-002")
+            .apiKey("not needed")
+            .baseUrl("http://localhost:12434/engines/llama.cpp/v1")
+            .modelName("ai/mistral")
             .build()
     }
 
     @PostConstruct
     fun initialize() {
-        if (openaiApiKey.isBlank()) {
-            logger.warn("OpenAI API key not configured - RAG service will be disabled")
-            return
-        }
-        
+        logger.info("Initializing RAG service with local Mistral model")
         loadDocumentsAsync()
     }
 
