@@ -21,7 +21,7 @@ class AirlineLoyaltyService {
     private val logger = Logger.getLogger(AirlineLoyaltyService::class.java)
     private val chatMemory = MessageWindowChatMemory.withMaxMessages(20)
     
-    // Initialize chat model with guardrails enabled
+    // Initialize a chat model with guardrails enabled
     private val chatModel = MistralAiChatModel.builder()
         .baseUrl("http://localhost:12434/engines/llama.cpp/v1")
         .apiKey("not-needed") // Required by the API but not used with local models
@@ -35,10 +35,10 @@ class AirlineLoyaltyService {
             logger.info("Processing query: $userQuery")
             logger.info("RAG Service Status: ${ragService.getStatus()}")
             
-            // Build enhanced query with RAG context
+            // Build an enhanced query with RAG context
             val enhancedQuery = buildEnhancedQuery(userQuery)
             
-            // Add system message only if this is the first interaction
+            // Add a system message only if this is the first interaction
             if (chatMemory.messages().isEmpty()) {
                 val systemMessage = SystemMessage.from("""
                     You are an expert airline loyalty program assistant. You help users understand and maximize their benefits from airline loyalty programs, particularly Delta SkyMiles and United MileagePlus.
