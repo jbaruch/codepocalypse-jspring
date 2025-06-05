@@ -23,7 +23,11 @@ class AirlineLoyaltyController {
     @GET
     fun index(): String {
         logger.info("Serving main page")
-        return template.data("query", "").data("answer", "").data("error", "").render()
+        return template.data("query", "")
+            .data("answer", "")
+            .data("error", "")
+            .data("conversationStatus", loyaltyService.getConversationStatus())
+            .render()
     }
 
     @POST
@@ -38,6 +42,7 @@ class AirlineLoyaltyController {
                     template.data("query", "")
                         .data("answer", "")
                         .data("error", "Please enter a question about airline loyalty programs.")
+                        .data("conversationStatus", loyaltyService.getConversationStatus())
                         .render()
                 }
                 query.length > 500 -> {
@@ -45,6 +50,7 @@ class AirlineLoyaltyController {
                     template.data("query", query)
                         .data("answer", "")
                         .data("error", "Question is too long. Please keep it under 500 characters.")
+                        .data("conversationStatus", loyaltyService.getConversationStatus())
                         .render()
                 }
                 else -> {
@@ -53,6 +59,7 @@ class AirlineLoyaltyController {
                     template.data("query", query)
                         .data("answer", answer)
                         .data("error", "")
+                        .data("conversationStatus", loyaltyService.getConversationStatus())
                         .render()
                 }
             }
@@ -61,6 +68,7 @@ class AirlineLoyaltyController {
             template.data("query", query ?: "")
                 .data("answer", "")
                 .data("error", "Sorry, I encountered an error processing your question. Please try again.")
+                .data("conversationStatus", loyaltyService.getConversationStatus())
                 .render()
         }
     }

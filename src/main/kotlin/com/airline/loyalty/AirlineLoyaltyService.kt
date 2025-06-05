@@ -1,9 +1,11 @@
 package com.airline.loyalty
 
-import dev.langchain4j.model.chat.ChatLanguageModel
+import dev.langchain4j.model.chat.ChatModel
 import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.data.message.SystemMessage
 import dev.langchain4j.data.message.UserMessage
+import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import jakarta.enterprise.context.ApplicationScoped
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.jboss.logging.Logger
@@ -16,9 +18,15 @@ class AirlineLoyaltyService {
     lateinit var openaiApiKey: String
 
     private val logger = Logger.getLogger(AirlineLoyaltyService::class.java)
+    
+    // Application-wide conversation memory with 20 message window
+    private val chatMemory: ChatMemory = MessageWindowChatMemory.withMaxMessages(20)
+    
+    // Lazy initialization of the chat model
+    private val chatModel: ChatModel by lazy { createChatModel() }
 
     private val systemPrompt = """
-        You are an expert airline loyalty program assistant. You help travelers understand:
+        You are an expert airline loyalty program assistant with conversation memory. You help travelers understand:
         - How to earn and redeem airline miles and points
         - Elite status benefits and requirements
         - Credit card partnerships and bonuses
@@ -26,25 +34,41 @@ class AirlineLoyaltyService {
         - Program transfers and partnerships
         - Travel tips for maximizing loyalty benefits
         
+        IMPORTANT: Remember user details throughout our conversation. If a user tells you their name, preferences, 
+        travel patterns, or any personal information, remember it and reference it in future responses. 
+        This creates a more personalized and helpful experience.
+        
         Provide helpful, accurate, and concise answers. If you're not sure about specific program details, 
         recommend checking the airline's official website for the most current information.
         
-        Keep responses under 300 words and focus on practical advice.
+        Keep responses under 300 words and focus on practical advice. When appropriate, reference previous 
+        parts of our conversation to provide more contextual and personalized assistance.
     """.trimIndent()
 
     fun processQuery(query: String): String {
-        logger.debug("Processing query with LangChain4j: $query")
+        logger.debug("Processing query with conversation memory: $query")
         
         return try {
-            val model = createChatModel()
+            // Add system message to memory if it's the first interaction
+            if (chatMemory.messages().isEmpty()) {
+                chatMemory.add(SystemMessage.from(systemPrompt))
+                logger.debug("Added system message to conversation memory")
+            }
             
-            val systemMessage = SystemMessage.from(systemPrompt)
+            // Add user message to memory
             val userMessage = UserMessage.from(query)
+            chatMemory.add(userMessage)
             
-            val response = model.generate(listOf(systemMessage, userMessage))
-            val answer = response.content().text()
+            // Generate response using all messages in memory
+            val response = chatModel.chat(chatMemory.messages())
+            val answer = response.aiMessage().text()
             
-            logger.debug("Generated response: ${answer.take(100)}...")
+            // Add AI response to memory
+            chatMemory.add(response.aiMessage())
+            
+            logger.debug("Generated response with memory context: ${answer.take(100)}...")
+            logger.debug("Current memory size: ${chatMemory.messages().size} messages")
+            
             answer
             
         } catch (e: Exception) {
@@ -66,7 +90,7 @@ class AirlineLoyaltyService {
         }
     }
 
-    private fun createChatModel(): ChatLanguageModel {
+    private fun createChatModel(): ChatModel {
         if (openaiApiKey.isBlank()) {
             throw IllegalStateException("OpenAI API key is not configured")
         }
@@ -78,5 +102,15 @@ class AirlineLoyaltyService {
             .timeout(Duration.ofSeconds(30))
             .maxRetries(2)
             .build()
+    }
+    
+    // Method to get conversation status for UI
+    fun getConversationStatus(): String {
+        val messageCount = chatMemory.messages().size
+        return when {
+            messageCount <= 1 -> "New conversation"
+            messageCount <= 10 -> "Active conversation ($messageCount messages)"
+            else -> "Long conversation ($messageCount messages)"
+        }
     }
 }
